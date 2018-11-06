@@ -1,31 +1,42 @@
 function PlotGraph()
     %get directory info
-    path = 'Beetle 2/right_bot/';
-    dinfo = dir(strcat(path, '*.txt'));
-    
+    path = 'Beetle 2/';
+    folder = {'right_top/', 'right_mid/', 'right_bot/', 'left_top/', 'left_mid/', 'left_bot/'};
+
     global var;
-    %loop all files
-    for i = 1:length(dinfo)
-        %convert current loop index to string
-        no_str = int2str(i);
-        %get current file
-        filename = dinfo(i).name;
-        var = load(strcat(path, filename));
-        
-        %smooth data
-        smoothData();
-        
-        plotDisp(var);
-        %save graph
-        saveas(gcf, strcat(path, 'Disp', no_str, '.jpg'));
-        
-        plotVel(var);
-        %save graph
-        saveas(gcf, strcat(path, 'Vel', no_str, '.jpg'));
-        
-        plotXY(var);        
-        %save graph
-        saveas(gcf, strcat(path, 'XY', no_str, '.jpg'));
+    %loop all folders
+    for pos = 1:length(folder)
+        dinfo = dir(strcat(path, char(folder(pos)), '*.txt'));
+        %loop all files
+        for i = 1:length(dinfo)
+            fprintf('Openning file %s\n', dinfo(i).name);
+            %convert current loop index to string
+            no_str = int2str(i);
+            %get current file
+            filename = dinfo(i).name;
+            var = load(strcat(path, char(folder(pos)), filename));  
+
+            %smooth data
+            smoothData();
+
+            plotDisp(var);
+            %save graph
+            saveas(gcf, strcat(path, char(folder(pos)), 'Disp', no_str, '.jpg'));
+
+            plotVel(var);
+            %save graph
+            saveas(gcf, strcat(path, char(folder(pos)), 'Vel', no_str, '.jpg'));
+
+            %get stimulation points
+            stimul_pnts = getStimulPoints(var);
+            start_pnt = stimul_pnts(1);
+            end_pnt = stimul_pnts(end);
+
+            plotXY(var, start_pnt, end_pnt);        
+            %save graph
+            saveas(gcf, strcat(path, char(folder(pos)), 'XY', no_str, '.jpg'));
+        end
+        fprintf('Successfully saved %s\n\n', char(folder(pos)));
     end
 end
 
@@ -37,8 +48,8 @@ function smoothData()
     end
     
     %convert degree to radian    
-    var(:,3) = deg2rad(var(:,3));
-    var(:,6) = deg2rad(var(:,6));
+    var(:,4) = deg2rad(var(:,4));
+    var(:,7) = deg2rad(var(:,7));
     
     %filter piezo
     piezo = zeros(size(var,1), 1);
@@ -53,6 +64,23 @@ function smoothData()
     var(:,8) = piezo;
 end
 
+function pnt = getStimulPoint(var, time, tolerance)
+    piezo = var(:,8);
+    
+    %get stimul pnt within tolerance
+    start_tol = find(var(:,1) > time - tolerance, 1);
+    end_tol = find(var(:,1) > time + tolerance, 1);
+    pnts = find(piezo(start_tol:end_tol,1)>0.2);
+    
+    %if stimul_pnt has no value, set default pnt
+    if (size(pnts, 1) == 0)
+        pnts = find(var(:,1) > time, 1);        
+        pnt = pnts(1,1);
+    else
+        pnt = start_tol + pnts(1,1);
+    end
+end
+
 function pnts = getStimulPoints(var)
     %1 sec tolerance
     tolerance = 1000;
@@ -61,21 +89,10 @@ function pnts = getStimulPoints(var)
     end_time = 10000;
     
     %index of respective time
-    start_pnt = find(var(:,1) > start_time - tolerance, 1);
-    end_pnt = find(var(:,1) > end_time + tolerance, 1);
+    start_pnt = getStimulPoint(var, start_time, tolerance);
+    end_pnt = getStimulPoint(var, end_time, tolerance);
     
-    piezo = var(:,8);
-    
-    stimul_pnts = find(piezo(start_pnt:end_pnt,1)>0.2);
-    %get index of time
-    if (size(stimul_pnts, 1) >= 2)
-        pnts = start_pnt + stimul_pnts(1) : start_pnt + stimul_pnts(end);
-    else
-        %if stimul_pnts still has no value, set default pnts        
-        start_pnt = find(var(:,1) > start_time, 1);
-        end_pnt = find(var(:,1) > end_time, 1);
-        pnts = start_pnt : end_pnt;
-    end
+    pnts = start_pnt : end_pnt;
 end
 
 function plotMaxMin(i, type, var)
@@ -98,7 +115,7 @@ function plotDisp(var)
     plot(var(:,1),var(:,2));
     hold on;
     plot(var(:,1),var(:,3));
-    plot(var(:,1),var(:,4)/30);
+    plot(var(:,1),var(:,4));
     
     %plot and scale the piezo
     height = ylim;
@@ -108,7 +125,7 @@ function plotDisp(var)
     %add details
     xlabel('Time(ms)');
     title('Displacement of Beetle when encountering an obstacle');
-    legend('X (cm)','Y (cm)','Rot (x30 deg)','piezo (x1 V)','Location','BestOutside');
+    legend('X (cm)','Y (cm)','Rot (rad)','piezo','Location','BestOutside');
     %include max and min point of X, Y, Rot
     plotMaxMin(2, 'X', var);
     plotMaxMin(3, 'Y', var);
@@ -139,23 +156,23 @@ function plotVel(var)
     plotMaxMin(7, 'R', var);
 end
 
-function plotXY(var)
+function plotXY(var, start_stim, end_stim)
     %smoothen and plot x, y
     hold off;
     %overwrite timestamp value to use plotMaxMin function
     var(:,1) = smooth(var(:,3),var(:,2),0.4,'rloess');
-    
     plot(var(:,1), var(:,3));
     hold on;
-    %plot and scale the piezo
-    height = ylim;
-    G_height = height(2) - height(1);
-    plot(var(:,1), var(:,8)*G_height*2);
+    
+    %plot piezo stimulation points
+    temp_var = var(start_stim:end_stim,:);
+    plot(temp_var(:,1), temp_var(:,3),'k','LineWidth',2);
 
     %add details
     xlabel('Horizontal Path(cm)');
+    ylabel('Vertical (cm)');
     title('Movement of Beetle when encountering an obstacle');
-    legend('Y (cm)','piezo (x1 V)','Location','BestOutside');
+    legend('Movement path', 'piezo','Location','BestOutside');
     %include max and min point of X, Y
     plotMaxMin(2, 'X', var);
     plotMaxMin(3, 'Y', var);

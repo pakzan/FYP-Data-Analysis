@@ -1,7 +1,7 @@
 %plot standard deviation of 6 positions of each type together
 function PlotStdDeviation()
     %get directory info
-    path = 'Beetle 1/';
+    path = 'Beetle 2/';
     folder = {'right_top', 'right_mid', 'right_bot', 'left_top', 'left_mid', 'left_bot'};
     %declaration
     types = {'X', 'Y', 'Rot', 'Vx', 'Vy', 'Vrot'};

@@ -10,7 +10,7 @@ function CombineAvg()
     all_var = zeros(max_index, 8, length(folder)); %(index, type, position)
     
     %get average data in all positions
-    for pos = 1:length(folder)       
+    for pos = 1:length(folder)
         dinfo = dir(strcat(path, char(folder(pos)), '*.txt'));
         var = zeros(max_index,8); 
         %get average data in each position
@@ -45,8 +45,8 @@ function CombineAvg()
     all_var(1:start_pnt, 8, 6) = 0;
     all_var(end_pnt:max_index, 8, 6) = 0;
     
-    plotAll(all_var);
-    %plotXY(all_var, start_pnt, end_pnt);
+    %plotAll(all_var);
+    plotXY(all_var, start_pnt, end_pnt);
 end
 
 function var = smoothData(var)
@@ -116,12 +116,13 @@ function plotXY(var, start_stim, end_stim)
     %smoothen and plot x, y
     hold off;    
     %plot data of XY from each position
-    for pos = 1:size(var, 3)        
-        graph(pos) = plot(smooth(var(:,3, pos),var(:,2, pos),0.4,'rloess'), var(:,3, pos));
-        hold on;    
+    for pos = 1:size(var, 3)
+        var(:,1, pos) = smooth(var(:,3, pos),var(:,2, pos),0.4,'rloess');
+        graph(pos) = plot(var(:,1, pos), var(:,3, pos));
+        hold on;
         %plot piezo stimulation points
         temp_var = var(start_stim:end_stim,:, pos);
-        graph(7) = plot(smooth(temp_var(:,3,:),temp_var(:,2,:),0.4,'rloess'), temp_var(:,3,:),'k');
+        graph(7) = plot(temp_var(:,1,:), temp_var(:,3,:),'k','LineWidth',2);
     end
 
     %add details
@@ -143,19 +144,26 @@ function pnts = getStimulPoints(var)
     end_time = 10000;
     
     %index of respective time
-    start_pnt = find(var(:,1) > start_time - tolerance, 1);
-    end_pnt = find(var(:,1) > end_time + tolerance, 1);
+    start_pnt = getStimulPoint(var, start_time, tolerance);
+    end_pnt = getStimulPoint(var, end_time, tolerance);
     
+    pnts = start_pnt : end_pnt;
+end
+
+
+function pnt = getStimulPoint(var, time, tolerance)
     piezo = var(:,8);
-    stimul_pnts = find(piezo(start_pnt:end_pnt,1)>0.2);
     
-    %get index of time
-    if (size(stimul_pnts, 1) >= 2)
-        pnts = start_pnt + stimul_pnts(1) : start_pnt + stimul_pnts(end);
+    %get stimul pnt within tolerance
+    start_tol = find(var(:,1) > time - tolerance, 1);
+    end_tol = find(var(:,1) > time + tolerance, 1);
+    pnts = find(piezo(start_tol:end_tol,1)>0.2);
+    
+    %if stimul_pnt has no value, set default pnt
+    if (size(pnts, 1) == 0)
+        pnts = find(var(:,1) > time, 1);        
+        pnt = pnts(1,1);
     else
-        %if stimul_pnts still has no value, set default pnts        
-        start_pnt = find(var(:,1) > start_time, 1);
-        end_pnt = find(var(:,1) > end_time, 1);
-        pnts = start_pnt : end_pnt;
+        pnt = start_tol + pnts(1,1);
     end
 end

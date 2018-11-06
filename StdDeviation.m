@@ -1,6 +1,6 @@
 function StdDeviation()
     %get directory info
-    path = 'Beetle 1/';
+    path = 'Beetle 2/';
     folder = {'right_top/', 'right_mid/', 'right_bot/', 'left_top/', 'left_mid/', 'left_bot/'};
     
     %loop all folders
@@ -32,8 +32,8 @@ function var = smoothData(var)
     end
     
     %convert degree to radian    
-    var(:,3) = deg2rad(var(:,3));
-    var(:,6) = deg2rad(var(:,6));
+    var(:,4) = deg2rad(var(:,4));
+    var(:,7) = deg2rad(var(:,7));
 end
 
 function val_change = getStimulPointValue(var)
@@ -62,19 +62,26 @@ function pnts = getStimulPoints(var)
     end_time = 10000;
     
     %index of respective time
-    start_pnt = find(var(:,1) > start_time - tolerance, 1);
-    end_pnt = find(var(:,1) > end_time + tolerance, 1);
+    start_pnt = getStimulPoint(var, start_time, tolerance);
+    end_pnt = getStimulPoint(var, end_time, tolerance);
     
+    pnts = start_pnt : end_pnt;
+end
+
+
+function pnt = getStimulPoint(var, time, tolerance)
     piezo = var(:,8);
-    stimul_pnts = find(piezo(start_pnt:end_pnt,1)>0.2);
     
-    %get index of time
-    if (size(stimul_pnts, 1) >= 2)
-        pnts = start_pnt + stimul_pnts(1) : start_pnt + stimul_pnts(end);
+    %get stimul pnt within tolerance
+    start_tol = find(var(:,1) > time - tolerance, 1);
+    end_tol = find(var(:,1) > time + tolerance, 1);
+    pnts = find(piezo(start_tol:end_tol,1)>0.2);
+    
+    %if stimul_pnt has no value, set default pnt
+    if (size(pnts, 1) == 0)
+        pnts = find(var(:,1) > time, 1);        
+        pnt = pnts(1,1);
     else
-        %if stimul_pnts still has no value, set default pnts        
-        start_pnt = find(var(:,1) > start_time, 1);
-        end_pnt = find(var(:,1) > end_time, 1);
-        pnts = start_pnt : end_pnt;
+        pnt = start_tol + pnts(1,1);
     end
 end
