@@ -1,6 +1,6 @@
 function StdDeviation()
     %get directory info
-    path = 'Beetle 2/';
+    path = 'Beetle 1/';
     folder = {'right_top/', 'right_mid/', 'right_bot/', 'left_top/', 'left_mid/', 'left_bot/'};
     
     %loop all folders
@@ -14,10 +14,10 @@ function StdDeviation()
             filename = dinfo(i).name;
             var = load(strcat(path, char(folder(j)), filename));
 
-            %smooth data then calculate gradient
-            grad = getGradient(smoothData(var));
+            %smooth data
+            var = smoothData(var);
             %get the value change for each trail
-            val_change(i, :) = getStimulPointValue(var, grad);
+            val_change(i, :) = getStimulPointValue(var);
         end
         %save data
         save(strcat(path, char(folder(j)), 'stdDeviation.mat'), 'val_change'); 
@@ -30,29 +30,18 @@ function var = smoothData(var)
     for i = 2:size(var,2)-1
         var(:,i) = smooth(var(:,1),var(:,i),0.3,'rloess');
     end
-    %filter and smoothen piezo
-    piezo = var(:,8);
-    piezo(piezo < 0.2) = 0;
-    %var(:,8) = smooth(var(:,1),piezo,0.1,'rloess');
     
     %convert degree to radian    
     var(:,3) = deg2rad(var(:,3));
     var(:,6) = deg2rad(var(:,6));
 end
 
-function grad = getGradient(var)
-    grad = var(1:size(var,1)-1,:);
-    %get gradient of displacement and velocity of X, Y, Rotation
-    for i = 2:7
-        grad(:,i) = diff(var(:,i))./diff(var(:,1));
-    end
-end
-
-function val_change = getStimulPointValue(var, grad)
+function val_change = getStimulPointValue(var)
     %get the total changes in value for each stimulation for displacement and velocity of X, Y, Rotation
     val_change = zeros(1, 6);
-    start_pnt = getStimulPoint(5000, grad);
-    end_pnt = getStimulPoint(10000, grad);
+    stimul_pnts = getStimulPoints(var);
+    start_pnt = stimul_pnts(1);
+    end_pnt = stimul_pnts(end);
     
     for type = 2:7
         if abs(min(var(start_pnt:end_pnt, type))) < max(var(start_pnt:end_pnt, type))
@@ -65,22 +54,27 @@ function val_change = getStimulPointValue(var, grad)
         
 end
 
-function avg_pnt = getStimulPoint(time, grad)
+function pnts = getStimulPoints(var)
     %1 sec tolerance
     tolerance = 1000;
-    upper_time = time + tolerance;
-    lower_time = time - tolerance;    
-
-    %get index of upper and lower time
-    upper_pnt = find(grad(:,1) > upper_time, 1);
-    lower_pnt = find(grad(:,1) > lower_time, 1);
+    %stimulation from 5 sec to 10 sec
+    start_time = 5000;
+    end_time = 10000;
     
-    %get the point with lowest gradient
-    %get average points among X, Y, Rotation
-    avg_pnt = 0;
-    for type = 2:4        
-        [val, pnt] = min(grad(lower_pnt:upper_pnt, type));
-        avg_pnt = avg_pnt + pnt;
+    %index of respective time
+    start_pnt = find(var(:,1) > start_time - tolerance, 1);
+    end_pnt = find(var(:,1) > end_time + tolerance, 1);
+    
+    piezo = var(:,8);
+    stimul_pnts = find(piezo(start_pnt:end_pnt,1)>0.2);
+    
+    %get index of time
+    if (size(stimul_pnts, 1) >= 2)
+        pnts = start_pnt + stimul_pnts(1) : start_pnt + stimul_pnts(end);
+    else
+        %if stimul_pnts still has no value, set default pnts        
+        start_pnt = find(var(:,1) > start_time, 1);
+        end_pnt = find(var(:,1) > end_time, 1);
+        pnts = start_pnt : end_pnt;
     end
-    avg_pnt = round(avg_pnt/3) + lower_pnt;
 end

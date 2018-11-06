@@ -1,11 +1,11 @@
 function PlotGraph()
     %get directory info
-    path = 'Beetle 1/right_top/';
+    path = 'Beetle 2/right_bot/';
     dinfo = dir(strcat(path, '*.txt'));
     
+    global var;
     %loop all files
     for i = 1:length(dinfo)
-        global var;
         %convert current loop index to string
         no_str = int2str(i);
         %get current file
@@ -35,10 +35,47 @@ function smoothData()
     for i = 2:size(var,2)-1
         var(:,i) = smooth(var(:,1),var(:,i),0.3,'rloess');
     end
-    %filter and smoothen piezo
+    
+    %convert degree to radian    
+    var(:,3) = deg2rad(var(:,3));
+    var(:,6) = deg2rad(var(:,6));
+    
+    %filter piezo
+    piezo = zeros(size(var,1), 1);
+    %get stimulation points
+    stimul_pnt = getStimulPoints(var);
+    %get mean value within stimulation points
+    temp_piezo = var(:,8);
+    piezo_mean = mean(temp_piezo(stimul_pnt,1));
+    %set mean value
+    piezo(stimul_pnt(1):stimul_pnt(end), 1) = piezo_mean;
+    
+    var(:,8) = piezo;
+end
+
+function pnts = getStimulPoints(var)
+    %1 sec tolerance
+    tolerance = 1000;
+    %stimulation from 5 sec to 10 sec
+    start_time = 5000;
+    end_time = 10000;
+    
+    %index of respective time
+    start_pnt = find(var(:,1) > start_time - tolerance, 1);
+    end_pnt = find(var(:,1) > end_time + tolerance, 1);
+    
     piezo = var(:,8);
-    piezo(piezo < 0.2) = 0;
-    %var(:,8) = smooth(var(:,1),piezo,0.1,'rloess');
+    
+    stimul_pnts = find(piezo(start_pnt:end_pnt,1)>0.2);
+    %get index of time
+    if (size(stimul_pnts, 1) >= 2)
+        pnts = start_pnt + stimul_pnts(1) : start_pnt + stimul_pnts(end);
+    else
+        %if stimul_pnts still has no value, set default pnts        
+        start_pnt = find(var(:,1) > start_time, 1);
+        end_pnt = find(var(:,1) > end_time, 1);
+        pnts = start_pnt : end_pnt;
+    end
 end
 
 function plotMaxMin(i, type, var)
@@ -62,8 +99,11 @@ function plotDisp(var)
     hold on;
     plot(var(:,1),var(:,3));
     plot(var(:,1),var(:,4)/30);
-    %plot piezo
-    plot(var(:,1),var(:,8));
+    
+    %plot and scale the piezo
+    height = ylim;
+    G_height = height(2) - height(1);
+    plot(var(:,1), var(:,8)*G_height*2);
 
     %add details
     xlabel('Time(ms)');
@@ -83,8 +123,10 @@ function plotVel(var)
     hold on;
     plot(var(:,1),var(:,6));
     plot(var(:,1),var(:,7)/30);
-    %plot piezo
-    plot(var(:,1),var(:,8));
+    %plot and scale the piezo
+    height = ylim;
+    G_height = height(2) - height(1);
+    plot(var(:,1), var(:,8)*G_height*2);
 
     %add details
     xlabel('Time(ms)');
@@ -105,8 +147,10 @@ function plotXY(var)
     
     plot(var(:,1), var(:,3));
     hold on;
-    %plot piezo
-    plot(var(:,1), var(:,8));
+    %plot and scale the piezo
+    height = ylim;
+    G_height = height(2) - height(1);
+    plot(var(:,1), var(:,8)*G_height*2);
 
     %add details
     xlabel('Horizontal Path(cm)');
