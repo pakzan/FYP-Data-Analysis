@@ -7,9 +7,9 @@ function Sensor()
     set(s, 'Parity', 'none');
     fopen(s);
     
-    tic;
     global fid;
-    fid = fopen(strcat(datestr(now,'ddmmyy_HHMMSS'), '.txt'),'wt');
+    timestamp = datestr(now,'ddmmyy_HHMMSS');
+    fid = fopen(strcat(timestamp, '.txt'),'wt');
     hold off;
 
     %call onCleanup when "Ctrl C" detected
@@ -18,7 +18,9 @@ function Sensor()
     %remove previous data
     fgetl(s);fgetl(s);
     
+    eval(strcat('edit startRecord', timestamp, '.txt'));
     moved = false;
+    tic;
     while(toc < 15)
         % call python to move linear actuator after 5 sec
         if(toc > 5 && ~moved)

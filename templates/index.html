@@ -1,0 +1,9 @@
+<link rel="shortcut icon" href="#" />
+<script type="text/javascript">  	
+	//get current status from flask server
+	//text to speech API
+	var source = new EventSource("/audio_feed");
+	source.onmessage = function(event) {
+		Android.startRecordFunc(event.data);
+	}
+</script>
