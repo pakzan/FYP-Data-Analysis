@@ -11,23 +11,19 @@ function Sensor()
     timestamp = datestr(now,'ddmmyy_HHMMSS');
     fid = fopen(strcat(timestamp, '.txt'),'wt');
     hold off;
-
+    
     %call onCleanup when "Ctrl C" detected
     cleanupObj = onCleanup(@cleanMeUp);
 
     %remove previous data
     fgetl(s);fgetl(s);
+
+	% call python to start record
+    fpip = fopen(strcat('startRecord', timestamp, '.txt'),'wt');
+    fclose(fpip);
     
-    eval(strcat('edit startRecord', timestamp, '.txt'));
-    moved = false;
     tic;
-    while(toc < 15)
-        % call python to move linear actuator after 5 sec
-        if(toc > 5 && ~moved)
-            edit startMove.txt;
-            moved = true;
-        end
-        
+    while(toc < 15)        
         %remove empty line
         out = fgetl(s);
         while(isempty(out))

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:keepScreenOn="true"
     tools:context=".MainActivity">
 
     <WebView
@@ -24,8 +25,8 @@
         android:layout_marginStart="8dp"
         android:ems="8"
         android:hint="ip Address"
-        android:inputType="numberDecimal"
-        android:text="172.20.12.91"
+        android:inputType="phone"
+        android:text="10.27.3.151"
         android:textColor="@color/colorAccent"
         android:textSize="24sp" />
 

@@ -71,6 +71,22 @@ public class MainActivity extends Activity implements MediaRecorder.OnInfoListen
     }
 
     private void initRecorder() {
+
+        Camera mCamera;
+        try {
+            mCamera = Camera.open();
+            Camera.Parameters parameters = mCamera.getParameters();
+
+            parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+            parameters.set("cam_mode", 1 ); //not sure why this arcane setting is required. found this in another post on Stackoverlflow
+
+            mCamera.setParameters(parameters);
+            recorder.setCamera(mCamera);
+            mCamera.unlock();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         recorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
         recorder.setVideoSource(MediaRecorder.VideoSource.DEFAULT);
 
@@ -79,7 +95,7 @@ public class MainActivity extends Activity implements MediaRecorder.OnInfoListen
 
         recorder.setProfile(cpHigh);
 
-        recorder.setMaxDuration(16000); // 50 seconds
+        recorder.setMaxDuration(15500); // 15.5 seconds
         recorder.setMaxFileSize(50000000); // Approximately 5 megabytes
         recorder.setOnInfoListener(this);
     }
