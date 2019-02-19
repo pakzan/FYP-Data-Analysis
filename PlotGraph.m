@@ -1,7 +1,7 @@
 function PlotGraph()
     %get directory info
-    path = 'Beetle 2/';
-    folder = {'right_top/', 'right_mid/', 'right_bot/', 'left_top/', 'left_mid/', 'left_bot/'};
+    path = 'Beetle 1 (48_24)/';
+    folder = {'right top/', 'right mid/', 'right bot/', 'left top/', 'left mid/', 'left bot/'};
 
     global var;
     %loop all folders
@@ -17,7 +17,8 @@ function PlotGraph()
             var = load(strcat(path, char(folder(pos)), filename));  
 
             %smooth data
-            smoothData();
+            var = smoothData(var);
+            var = smoothPiezo(var);
 
             plotDisp(var);
             %save graph
@@ -26,6 +27,10 @@ function PlotGraph()
             plotVel(var);
             %save graph
             saveas(gcf, strcat(path, char(folder(pos)), 'Vel', no_str, '.jpg'));
+
+            plotAcc(var);
+            %save graph
+            saveas(gcf, strcat(path, char(folder(pos)), 'Acc', no_str, '.jpg'));
 
             %get stimulation points
             stimul_pnts = getStimulPoints(var);
@@ -38,61 +43,6 @@ function PlotGraph()
         end
         fprintf('Successfully saved %s\n\n', char(folder(pos)));
     end
-end
-
-function smoothData()    
-    global var;
-    %smoothen x, y, rotation
-    for i = 2:size(var,2)-1
-        var(:,i) = smooth(var(:,1),var(:,i),0.3,'rloess');
-    end
-    
-    %convert degree to radian    
-    var(:,4) = deg2rad(var(:,4));
-    var(:,7) = deg2rad(var(:,7));
-    
-    %filter piezo
-    piezo = zeros(size(var,1), 1);
-    %get stimulation points
-    stimul_pnt = getStimulPoints(var);
-    %get mean value within stimulation points
-    temp_piezo = var(:,8);
-    piezo_mean = mean(temp_piezo(stimul_pnt,1));
-    %set mean value
-    piezo(stimul_pnt(1):stimul_pnt(end), 1) = piezo_mean;
-    
-    var(:,8) = piezo;
-end
-
-function pnt = getStimulPoint(var, time, tolerance)
-    piezo = var(:,8);
-    
-    %get stimul pnt within tolerance
-    start_tol = find(var(:,1) > time - tolerance, 1);
-    end_tol = find(var(:,1) > time + tolerance, 1);
-    pnts = find(piezo(start_tol:end_tol,1)>0.2);
-    
-    %if stimul_pnt has no value, set default pnt
-    if (size(pnts, 1) == 0)
-        pnts = find(var(:,1) > time, 1);        
-        pnt = pnts(1,1);
-    else
-        pnt = start_tol + pnts(1,1);
-    end
-end
-
-function pnts = getStimulPoints(var)
-    %1 sec tolerance
-    tolerance = 1000;
-    %stimulation from 5 sec to 10 sec
-    start_time = 5000;
-    end_time = 10000;
-    
-    %index of respective time
-    start_pnt = getStimulPoint(var, start_time, tolerance);
-    end_pnt = getStimulPoint(var, end_time, tolerance);
-    
-    pnts = start_pnt : end_pnt;
 end
 
 function plotMaxMin(i, type, var)
@@ -129,7 +79,6 @@ function plotDisp(var)
     %include max and min point of X, Y, Rot
     plotMaxMin(2, 'X', var);
     plotMaxMin(3, 'Y', var);
-    var(:,4) = var(:,4)/30;
     plotMaxMin(4, 'R', var);
 end
 
@@ -139,7 +88,7 @@ function plotVel(var)
     plot(var(:,1),var(:,5));
     hold on;
     plot(var(:,1),var(:,6));
-    plot(var(:,1),var(:,7)/30);
+    plot(var(:,1),var(:,7));
     %plot and scale the piezo
     height = ylim;
     G_height = height(2) - height(1);
@@ -148,12 +97,37 @@ function plotVel(var)
     %add details
     xlabel('Time(ms)');
     title('Velocity of Beetle when encountering an obstacle');
-    legend('Vx (cm/s)','Vy (cm/s)','Vrot (x30 deg/s)','piezo (x1 V)','Location','BestOutside');
+    legend('Vx (cm/s)','Vy (cm/s)','Vrot (rad/s)','piezo','Location','BestOutside');
     %include max and min point of X, Y, Rot
     plotMaxMin(5, 'X', var);
     plotMaxMin(6, 'Y', var);
-    var(:,7) = var(:,7)/30;
     plotMaxMin(7, 'R', var);
+end
+
+function plotAcc(var)
+    %calculate acceleration from velocity
+    acc(:,1) = var(:,1);
+    acc(:,2:4) = getSmoothGrad(var(:,1), var(:,5:7));
+    
+    %plot x, y, rotation    
+    hold off;
+    plot(var(:,1),acc(:,2));
+    hold on;
+    plot(var(:,1),acc(:,3));
+    plot(var(:,1),acc(:,4));
+    %plot and scale the piezo
+    height = ylim;
+    G_height = height(2) - height(1);
+    plot(var(:,1), var(:,8)*G_height*2);
+
+    %add details
+    xlabel('Time(ms)');
+    title('Acceleration of Beetle when encountering an obstacle');
+    legend('Ax (cm/s^2)','Ay (cm/s^2)','Arot (rad/s^2)','piezo','Location','BestOutside');
+    %include max and min point of X, Y, Rot
+    plotMaxMin(2, 'X', acc);
+    plotMaxMin(3, 'Y', acc);
+    plotMaxMin(4, 'R', acc);
 end
 
 function plotXY(var, start_stim, end_stim)
