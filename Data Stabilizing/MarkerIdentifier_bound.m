@@ -4,15 +4,17 @@ function MarkerIdentifier_diff()
     global dimens
     global parts
     global tolerance
+    global template
     
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% load mat from raw csv %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % ignore first 5 rows and first 2 columns
-%     filename = 'Trial 9.csv';
-%     offset = [5, 2];
-%     var = csvread(filename, offset(1), offset(2));
+     filename = 'Trial 9.csv';
+     offset = [5, 2];
+     var = csvread(filename, offset(1), offset(2));
     
-    var = importdata('test.csv');
+    %var = importdata('test.csv');
+    template = importdata('template.csv');
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% get/set general variables %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     [col_length, row_length] = size(var);
@@ -21,7 +23,7 @@ function MarkerIdentifier_diff()
     
     % set tolerance to obtain clean result
     % tolerance = [refining row, record prev_row, include to sample]
-    tolerance = [2, 100, 20];
+    tolerance = [10, 20, 50];
     
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% main function %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -30,7 +32,6 @@ function MarkerIdentifier_diff()
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% plot graph %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     hold off
-    
     for part = 0:parts-1
         xyz = [part*3 + 1, part*3 + 2, part*3 + 3];
 
@@ -43,21 +44,23 @@ function MarkerIdentifier_diff()
         hold on
     end
     grid on
-    
-    save(var);
 end
 
 
 function org_var = organiseArr(var)
     global col_length
     global row_length
+    global template
+    global parts
+    global dimens
+    global iscontain
     
     % convert 1d array to 2d array (x, y, z)
     prev_row_2d(1,:) = var(col_length, :);
     
     % sort and store value to new_var
-    org_var = nan(col_length, row_length);
-       
+    org_var = nan(col_length, row_length);    
+    
     for row_ind = 1:col_length
         row_2d = reshape_1to2(var(row_ind, :));
         [prev_row_2d, row_2d] = organiseRow(row_ind, prev_row_2d, row_2d);
@@ -69,22 +72,9 @@ function [prev_row, org_row] = organiseRow(abs_row, prev_row, row)
     global dimens
     global parts
     global tolerance
+    global iscontain
         
     org_row = nan(parts, dimens);
-    if abs_row > 20
-        for part = 1:parts
-            for temp_part = 1:parts
-                cols = dimens*(part-1)+1:dimens*(part-1)+3;
-                temp_row = prev_row(:, cols);
-                iscontain = inhull(row(part, :), temp_row(~isnan(temp_row(:, 1)), :));
-                
-                if iscontain
-                    org_row(part, :) = row(temp_part, :);
-                    break
-                end
-            end
-        end
-    end
     
     % calculate the (x, y, z) distance for all parts    
     % between prev_row and row
@@ -99,16 +89,31 @@ function [prev_row, org_row] = organiseRow(abs_row, prev_row, row)
     end
     
     % reorganise the parts
+    temp_dist = nan(parts, parts);
     while any(~isnan(dist(:)))
         % find the minimum (x, y, z) distance for all parts 
         [minval, ind] = min(dist(:));
         [ind_row, ind_col] = ind2sub(size(dist), ind);
-        
+                
         org_row(ind_row, :) = row(ind_col, :);
         
+        row(ind_col, :) = nan;
         % replace used column and row to nan
         dist(ind_row, :) = nan;
         dist(:, ind_col) = nan;
+    end
+    
+    if org_row(5, 1) < -10 && org_row(5, 3) > 170 
+        org_row([3 5], :) = org_row([5 3], :);
+    end
+    
+    for part = 1:parts
+        if org_row(part, 1) < -15
+            org_row([part 7], :) = org_row([7 part], :);
+        end
+        if org_row(part, 1) > 50
+            org_row([part 8], :) = org_row([8 part], :);
+        end
     end
     
     %update previous row
