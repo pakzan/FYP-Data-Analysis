@@ -3,7 +3,7 @@ function CombineAvg()
     global path
     paths = {'Beetle 3 (45_25)/', 'Beetle 4 (44_23)/', 'Beetle 5 (36_25)/', 'Beetle 6 (52_24)/', 'Beetle 7 (49_25)/', 'Beetle 8 (44_22)/', 'Beetle 9 (47_25)/'};
     folder = {'right top/', 'right mid/', 'right bot/', 'left top/', 'left mid/', 'left bot/'};
-        
+
     for path_i = 1:length(paths)
         path = char(paths(path_i));
         fprintf('\nOpenning path %s\n', path);

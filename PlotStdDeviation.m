@@ -26,7 +26,7 @@ function PlotStdDeviation()
             for pos = 1:length(folder)
                 type_data(:,pos) = var(pos).val_change(:,type);
             end
-            hold off;    
+            hold off;
             boxplot(type_data, folder);
 
             %add details
