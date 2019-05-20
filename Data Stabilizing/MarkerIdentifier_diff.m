@@ -8,11 +8,11 @@ function MarkerIdentifier_diff()
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% load mat from raw csv %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % ignore first 5 rows and first 2 columns
-%     filename = 'Trial 9.csv';
-%     offset = [5, 2];
-%     var = csvread(filename, offset(1), offset(2));
+    filename = 'Trial 5.csv';
+    offset = [5, 2];
+    var = csvread(filename, offset(1), offset(2));
     
-    var = importdata('test.csv');
+%     var = importdata('test.csv');
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% get/set general variables %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     [col_length, row_length] = size(var);
@@ -21,12 +21,12 @@ function MarkerIdentifier_diff()
     
     % set tolerance to obtain clean result
     % tolerance = [refining row, record prev_row, include to sample]
-    tolerance = [2, 20, 20];
+    tolerance = [5, 20, 20];
     
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% main function %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     var = organiseArr(var);
-    
+    classify_var = nan(1, dimens+1);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% plot graph %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     hold off
@@ -41,10 +41,12 @@ function MarkerIdentifier_diff()
 
         plot3(var(idxs, xyz(1)), var(idys, xyz(2)), var(idzs, xyz(3)));
         hold on
+        
+        classify_var = [classify_var; var(idxs, xyz(1):xyz(3)), part*idxs(idxs, 1)];
     end
     grid on
     
-    save(var);
+    save('classify_var.mat', 'classify_var');
 end
 
 
@@ -111,6 +113,8 @@ function [prev_row, org_row, partition] = organiseRow(abs_row, partition, prev_r
     18.6987   23.1396  185.3144;
     -25.7260   30.1086  174.8343;
     60.3430   20.4196  165.8223];
+hole1 = [-6, 38, 178];
+hole2 = [-6, 37, 170];
 
     % calculate the (x, y, z) distance for all parts    
     % between prev_row and row
@@ -188,7 +192,7 @@ function [prev_row, org_row, partition] = organiseRow(abs_row, partition, prev_r
     
     %update previous row
     for part = 1:parts
-        if any(~isnan(org_row(part, :))) && norm(prev_row(part, :) - org_row(part, :)) < tolerance(2)
+        if any(~isnan(org_row(part, :))) && norm(prev_row(part, :) - org_row(part, :)) < tolerance(2) || norm(prev_row(part, :) - hole1) < 20 || norm(prev_row(part, :) - hole2) < 20
             prev_row(part, :) = org_row(part, :);
 %             partition = updatePart(part, partition, org_row);
         end

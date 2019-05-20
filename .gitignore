@@ -1,3 +1,6 @@
 Beetle*
 *.asv
 *.pyc
+*.csv
+*.pdf
+*.zip
