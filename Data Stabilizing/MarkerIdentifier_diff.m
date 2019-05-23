@@ -1,18 +1,38 @@
+%{
+Author Name: TAN PAK ZAN
+Date: 23/5/2019
+
+This is a program that sort the beetle's 8 body parts into correct order:
+left wing, left elytra, left leg, head, mesothorax, right leg, right elytra, right wing
+
+First, the program sort the parts by distance. Point that has the minimum
+distance with previous point is matched together under the same part.
+Second, the program sort elytra and leg by absolute coordinate. Parts that
+are lower and nearer to center are considered as legs.
+
+Input value: 
+FILENAME: name.csv of the input file
+OUT_FILENAME: name.csv of the output file
+TOLERANCE: tolerance values to filter the noise in distance or position sort
+%}
+
 function MarkerIdentifier_diff()
     global col_length
     global row_length
     global dimens
-    global parts    
+    global parts
+    global TOLERANCE
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% user input value %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    FILENAME = 'Trial 1.csv';
+    OUT_FILENAME = strcat('Sorted', FILENAME);
+    TOLERANCE = [4, 4]; % tolerance for [distance sort, position sort]
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% load mat from raw csv %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % ignore first 5 rows and first 2 columns
-    filename = 'Trial 1.csv';
     offset = [5, 2];
-    var = csvread(filename, offset(1), offset(2));
-    var(var == 0) = NaN;
-    
-    % output filename
-    out_filename = strcat('Sorted', filename);
+    var = csvread(FILENAME, offset(1), offset(2));
+    var(var == 0) = NaN;    
     
 %      var = importdata('test.csv');
     
@@ -41,7 +61,8 @@ function MarkerIdentifier_diff()
     end
     grid on
     
-    csvwrite(out_filename, var);
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% save csv file %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    csvwrite(OUT_FILENAME, var);
 %     save('classify_var.mat', 'classify_var');
 end
 
@@ -57,6 +78,7 @@ function org_var = organiseArr(var)
     org_var = nan(col_length, row_length);
     
     % sort 1st row by x in descending order
+    % left wing, left elytra, left leg, head, mesothorax, right leg, right elytra, right wing
     org_var(1,:) = sortRow(var(1, :));        
     % convert 1d array to 2d array (x, y, z)
     prev_row_2d = reshape_1to2(org_var(1, :));
@@ -68,7 +90,9 @@ function org_var = organiseArr(var)
         org_var(row_ind, :) = reshape_2to1(row_2d);
     end
     
-    % check if 2 parts(2nd and 3rd; 6th and 7th) collide with each other    
+    % sort whole var to make sure elytra and leg in correct position
+    org_var = resortArr(org_var);
+    % check if elytra and leg collide with each other
     collide = checkCollide(org_var);
     
     % sort by parts' position if collided
@@ -88,6 +112,7 @@ function [prev_row, org_row, prev_dist] = organiseRow(abs_row, prev_row, row, pr
     global dimens
     global parts
     global filter_no
+    global TOLERANCE
 
     % calculate the (x, y, z) distance for all parts    
     % between prev_row and row
@@ -119,7 +144,7 @@ function [prev_row, org_row, prev_dist] = organiseRow(abs_row, prev_row, row, pr
         if any(~isnan(org_row(part, :)))
             if (part == 1 && org_row(1, 1) > prev_row(1, 1)) || ...
                     (part == parts && org_row(parts, 1) < prev_row(parts, 1)) || ...
-                        cur_dist < mean(prev_dist(part,:)) * 4
+                        cur_dist < mean(prev_dist(part,:)) * TOLERANCE(1)
                 prev_row(part, :) = org_row(part, :);
                 
                 % dont update prev_dist if cur_dist too small
@@ -140,6 +165,7 @@ end
 
 function [prev_row, org_row, prev_dist] = organiseRow2(abs_row, prev_row, org_row, prev_dist, collide)
     global filter_no
+    global TOLERANCE
     
     % reorganise 2nd and 3rd part if they collided
     if collide(1) && org_row(2, 1) + org_row(2, 3) < org_row(3, 1) + org_row(3, 3)
@@ -156,7 +182,7 @@ function [prev_row, org_row, prev_dist] = organiseRow2(abs_row, prev_row, org_ro
         % update if distance within tolerance, else set current part to nan
         cur_dist = norm(prev_row(part, :) - org_row(part, :));
         if any(~isnan(org_row(part, :)))
-            if cur_dist < mean(prev_dist(part,:)) * 4;
+            if cur_dist < mean(prev_dist(part,:)) * TOLERANCE(2)
                 prev_row(part, :) = org_row(part, :);
                 
                 % dont update prev_dist if cur_dist too small
@@ -174,15 +200,31 @@ function [prev_row, org_row, prev_dist] = organiseRow2(abs_row, prev_row, org_ro
 end
 
 function collide = checkCollide(var)
-    % 2nd and 3rd part
+    % left elytra(2nd part) and left leg(3rd part)
     x1_max = max(var(:,4:6));
     x2_max = max(var(:,7:9));     
-    % 6th and 7th part
+    % right elytra(6th part) and right leg(7th part)
     x1_min = min(var(:,16:18));
     x2_min = min(var(:,19:21));
     
     % check if their extreme x position are nearby
     collide = [abs(x1_max(1) - x2_max(1)) < 1, abs(x1_min(1) - x2_min(1)) < 1];
+end
+
+function var = resortArr(var)
+    L_ely = mean(var(:,4:6));
+    L_leg = mean(var(:,7:9));
+    % left elytra before left leg (2nd and 3rd part)
+    if L_ely(1) + L_ely(3) < L_leg(1) + L_leg(3)
+        [var(:, 4:6), var(:, 7:9)] = deal(var(:, 7:9), var(:, 4:6));
+    end
+    
+    R_ely = mean(var(:,16:18));
+    R_leg = mean(var(:,19:21));
+    % right leg before right elytrax (6th and 7th part)
+    if R_ely(1) - R_ely(3) < R_leg(1) - R_leg(3)
+        [var(:, 16:18), var(:, 19:21)] = deal(var(:, 19:21), var(:, 16:18));
+    end
 end
 
 function sorted_row = sortRow(row)
@@ -206,6 +248,11 @@ function sorted_row = sortRow(row)
         x = part*3 + 1;
         sorted_x = parts_x(part+1,2);
         sorted_row(x:x+2) = row(sorted_x:sorted_x+2);
+    end
+    
+    % head before mesothorax (4th and 5th part)
+    if sorted_row(12) > sorted_row(15)
+        [sorted_row(10:12), sorted_row(13:15)] = deal(sorted_row(13:15), sorted_row(10:12));
     end
 end
 
