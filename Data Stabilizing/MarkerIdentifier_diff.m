@@ -2,16 +2,17 @@ function MarkerIdentifier_diff()
     global col_length
     global row_length
     global dimens
-    global parts
-    global tolerance
-    
+    global parts    
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% load mat from raw csv %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % ignore first 5 rows and first 2 columns
-    filename = 'Trial 9.csv';
+    filename = 'Trial 1.csv';
     offset = [5, 2];
     var = csvread(filename, offset(1), offset(2));
     var(var == 0) = NaN;
+    
+    % output filename
+    out_filename = strcat('Sorted', filename);
     
 %      var = importdata('test.csv');
     
@@ -20,14 +21,9 @@ function MarkerIdentifier_diff()
     dimens = 3;
     parts = row_length / dimens;
     
-    % set tolerance to obtain clean result
-    % tolerance = [refining row, record prev_row, include to sample]
-    tolerance = [2, 20, 20];
-    
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% main function %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    var = organiseArr(var, var);
-%     var = seperateArr(var);
+    var = organiseArr(var);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% plot graph %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     hold off
@@ -45,158 +41,53 @@ function MarkerIdentifier_diff()
     end
     grid on
     
+    csvwrite(out_filename, var);
 %     save('classify_var.mat', 'classify_var');
 end
 
-
-function org_var = seperateArr(var)
+function org_var = organiseArr(var)
     global col_length
     global row_length
     global parts
-        
-    %sort by mean x    
-%     for row_ind = 1:col_length
-%         mean_x = nan(parts, 2);
-%         if ~any(isnan(var(row_ind, :)))
-%             for part = 0:parts-1
-%                 x = part*3 + 1;
-%                 mean_x(part+1,:) = [var(row_ind, x), x];
-%             end   
-%             mean_x = sortrows(mean_x,-1);
-%             for part = 0:parts-1
-%                 xyz = [part*3 + 1, part*3 + 2, part*3 + 3];
-%                 sorted_xyz = [mean_x(part+1,2), mean_x(part+1,2)+1, mean_x(part+1,2)+2];
-%                 org_var(row_ind,xyz(1):xyz(3)) = var(row_ind,sorted_xyz(1):sorted_xyz(3));
-%             end
-%         else
-%             org_var(row_ind,:) = org_var(row_ind-1,:);
-%         end
-%     end
-                
-    org_var = var;
-%     prev_row = org_var(1, :);
-%     x1_max = max(org_var(:,4:6));
-%     x2_max = max(org_var(:,7:9));
-%     if abs(x1_max(1) - x2_max(1)) < 1        
-%         for row_ind = 2:col_length
-%             %rearrange left 2 positions
-%             if org_var(row_ind, 4) + org_var(row_ind, 6) < org_var(row_ind, 7) + org_var(row_ind, 9)
-%                 if norm(prev_row(7:9) - org_var(row_ind, 4:6))>20
-%                     org_var(row_ind, 4:6) = nan(1, 3);
-%                 else
-%                     prev_row(7:9) = org_var(row_ind, 4:6);
-%                 end
-%                 if norm(prev_row(4:6) - org_var(row_ind, 7:9))>20
-%                     org_var(row_ind, 7:9) = nan(1, 3);
-%                 else
-%                     prev_row(4:6) = org_var(row_ind, 7:9);
-%                 end
-%                 [org_var(row_ind, 4:6), org_var(row_ind, 7:9)] = deal(org_var(row_ind, 7:9), org_var(row_ind, 4:6));
-%             end
-%         end
-%     end
-%     x1_min = min(org_var(:,16:18));
-%     x2_min = min(org_var(:,19:21));
-%     if abs(x1_min(1) - x2_min(1)) < 1        
-%         for row_ind = 2:col_length
-%             %rearrange right 2 positions
-%             if org_var(row_ind, 16) - org_var(row_ind, 18) < org_var(row_ind, 19) - org_var(row_ind, 21)
-%                 if norm(prev_row(19:21) - org_var(row_ind, 16:18))>20
-%                     org_var(row_ind, 16:18) = nan(1, 3);
-%                 else
-%                     prev_row(19:21) = org_var(row_ind, 16:18);
-%                 end
-%                 if norm(prev_row(16:18) - org_var(row_ind, 19:21))>20
-%                     org_var(row_ind, 19:21) = nan(1, 3);
-%                 else
-%                     prev_row(16:18) = org_var(row_ind, 19:21);
-%                 end
-%                 [org_var(row_ind, 16:18), org_var(row_ind, 19:21)] = deal(org_var(row_ind, 19:21), org_var(row_ind, 16:18));
-%             end
-%         end
-%     end
-%     for row_ind = 1:col_length
-%         %rearrange middle 2 positions
-%         if org_var(row_ind, 11) < org_var(row_ind, 14)
-%             temp = org_var(row_ind, 10:12);
-%             org_var(row_ind, 10:12) = org_var(row_ind, 13:15);
-%             org_var(row_ind, 13:15) = temp;
-%         end
-%         
-%         %rearrange left 2 positions
-%         if org_var(row_ind, 4) + org_var(row_ind, 6) < org_var(row_ind, 7) + org_var(row_ind, 9)            
-%             [org_var(row_ind, 4:6), org_var(row_ind, 7:9)] = deal(org_var(row_ind, 7:9), org_var(row_ind, 4:6));
-%         end
-%         
-%         %rearrange right 2 positions
-%         if org_var(row_ind, 16) - org_var(row_ind, 18) < org_var(row_ind, 19) - org_var(row_ind, 21)
-%             [org_var(row_ind, 16:18), org_var(row_ind, 19:21)] = deal(org_var(row_ind, 19:21), org_var(row_ind, 16:18));
-%         end
-%     end
-end
-
-function org_var = organiseArr(var1, var)
-    global col_length
-    global row_length
-    global dimens
-    global parts
+    global filter_no
     
+    filter_no = 0;
     sample = 20;
-    speed = 20*ones(parts, sample);
-    
-    mean_x = nan(parts, 2);
-    for part = 0:parts-1
-        x = part*3 + 1;
-        mean_x(part+1,:) = [var(1, x), x];
-    end   
-    mean_x = sortrows(mean_x,-1);
-    for part = 0:parts-1
-        xyz = [part*3 + 1, part*3 + 2, part*3 + 3];
-        sorted_xyz = [mean_x(part+1,2), mean_x(part+1,2)+1, mean_x(part+1,2)+2];
-        var(1,xyz(1):xyz(3)) = var1(1,sorted_xyz(1):sorted_xyz(3));
-    end
-        
-    % convert 1d array to 2d array (x, y, z)
-    prev_row_2d = reshape_1to2(var(1, :));
-    
-    
-    % sort and store value to new_var
+    prev_dist = 20*ones(parts, sample);
     org_var = nan(col_length, row_length);
     
-%     sample = 20;
-%     samp_row = nan(sample, parts, dimens);
-%     for ind = 1:sample
-%         row_ind = randi([1 col_length],1);
-%         samp_row(ind, :, :) = reshape_1to2(var1(row_ind, :));
-%     end
-   
+    % sort 1st row by x in descending order
+    org_var(1,:) = sortRow(var(1, :));        
+    % convert 1d array to 2d array (x, y, z)
+    prev_row_2d = reshape_1to2(org_var(1, :));
+    
+    % sort by parts' distance
     for row_ind = 1:col_length
         row_2d = reshape_1to2(var(row_ind, :));
-        [prev_row_2d, row_2d, speed] = organiseRow(row_ind, prev_row_2d, row_2d, speed);
+        [prev_row_2d, row_2d, prev_dist] = organiseRow(row_ind, prev_row_2d, row_2d, prev_dist);
         org_var(row_ind, :) = reshape_2to1(row_2d);
     end
     
-    x1_max = max(org_var(:,4:6));
-    x2_max = max(org_var(:,7:9)); 
+    % check if 2 parts(2nd and 3rd; 6th and 7th) collide with each other    
+    collide = checkCollide(org_var);
     
-    x1_min = min(org_var(:,16:18));
-    x2_min = min(org_var(:,19:21));
-    arrange = [abs(x1_max(1) - x2_max(1)) < 1, abs(x1_min(1) - x2_min(1)) < 1];
-    
-    prev_row_2d = reshape_1to2(var(1, :));
-    if any(arrange)
+    % sort by parts' position if collided
+    if any(collide)
+        prev_dist = 20*ones(parts, sample);
+        prev_row_2d = reshape_1to2(org_var(1, :));
         for row_ind = 1:col_length
-            row_2d = reshape_1to2(var(row_ind, :));
-            [prev_row_2d, row_2d, speed] = organiseRow2(row_ind, prev_row_2d, row_2d, speed, arrange);
+            row_2d = reshape_1to2(org_var(row_ind, :));
+            [prev_row_2d, row_2d, prev_dist] = organiseRow2(row_ind, prev_row_2d, row_2d, prev_dist, collide);
             org_var(row_ind, :) = reshape_2to1(row_2d);
         end
     end
+    fprintf('Total points: %d\nFiltered points: %d\nFiltered Percentage: %f%%\n', col_length*parts, filter_no, 100*filter_no/(col_length*parts));      
 end
 
-function [prev_row, org_row, speed] = organiseRow(abs_row, prev_row, row, speed)
+function [prev_row, org_row, prev_dist] = organiseRow(abs_row, prev_row, row, prev_dist)
     global dimens
     global parts
-    global tolerance
+    global filter_no
 
     % calculate the (x, y, z) distance for all parts    
     % between prev_row and row
@@ -206,22 +97,12 @@ function [prev_row, org_row, speed] = organiseRow(abs_row, prev_row, row, speed)
         	dist(part, temp_part) = norm(row(temp_part, :) - prev_row(part, :)) + abs(row(temp_part, 1) - prev_row(part, 1));
         end
     end
-    
-%     dist = zeros(parts, parts);
-%     for part = 1:parts
-%         for temp_part = 1:parts
-%             dist(part, temp_part) = norm(row(temp_part, :) - [samp_row(1, part, 1), samp_row(1, part, 2), samp_row(1, part, 3)]);
-%             for ind = 2:sample
-%                 dist(part, temp_part) = min(dist(part, temp_part), norm(row(temp_part, :) - [samp_row(ind, part, 1), samp_row(ind, part, 2), samp_row(ind, part, 3)]));
-%             end
-%         end
-%     end
-    
+        
     % reorganise the parts
     org_row = nan(parts, dimens);
     while any(~isnan(dist(:)))
         % find the minimum (x, y, z) distance for all parts 
-        [minval, ind] = min(dist(:));
+        [~, ind] = min(dist(:));
         [ind_row, ind_col] = ind2sub(size(dist), ind);
                 
         org_row(ind_row, :) = row(ind_col, :);
@@ -231,88 +112,101 @@ function [prev_row, org_row, speed] = organiseRow(abs_row, prev_row, row, speed)
         dist(:, ind_col) = nan;
     end
     
-%     if norm(prev_row(1, :) - org_row(1, :)) + norm(prev_row(2, :) - org_row(2, :)) > norm(prev_row(1, :) - org_row(2, :)) + norm(prev_row(2, :) - org_row(1, :))
-%         [org_row(1, :), org_row(2, :)] = deal(org_row(2, :), org_row(1, :));
-%     end
-%     if norm(prev_row(1, :) - org_row(1, :)) + norm(prev_row(3, :) - org_row(3, :)) > norm(prev_row(1, :) - org_row(3, :)) + norm(prev_row(3, :) - org_row(1, :))
-%         [org_row(1, :), org_row(3, :)] = deal(org_row(3, :), org_row(1, :));
-%     end
-
-%     if org_row(1, 1) < org_row(2, 1)
-%         [org_row(1, :), org_row(2, :)] = deal(org_row(2, :), org_row(1, :));
-%     end
-%     if org_row(1, 1) < org_row(3, 1)
-%         [org_row(1, :), org_row(3, :)] = deal(org_row(3, :), org_row(1, :));
-%     end
-    
-    %update previous row
+    % update current and previous row
     for part = 1:parts
+        % update if distance within tolerance, else set current part to nan
         cur_dist = norm(prev_row(part, :) - org_row(part, :)) + abs(prev_row(part, 1) - org_row(part, 1));
-        if any(~isnan(org_row(part, :))) && cur_dist < mean(speed(part,:)) * 4;
-            prev_row(part, :) = org_row(part, :);
-            if cur_dist > 1
-                speed(part, :) = [speed(part, 2:end) cur_dist];
+        if any(~isnan(org_row(part, :)))
+            if (part == 1 && org_row(1, 1) > prev_row(1, 1)) || ...
+                    (part == parts && org_row(parts, 1) < prev_row(parts, 1)) || ...
+                        cur_dist < mean(prev_dist(part,:)) * 4
+                prev_row(part, :) = org_row(part, :);
+                
+                % dont update prev_dist if cur_dist too small
+                if cur_dist > 1
+                    prev_dist(part, :) = [prev_dist(part, 2:end) cur_dist];
+                end
+            else
+                filter_no = filter_no+1;
+                fprintf('Position exceeded tolerance! Row: %d, Col: %d - %d\n',...
+                            abs_row, 3*(part-1) + 1, 3*(part-1) + 3);      
+                org_row(part, :) = nan;
             end
-        else
-            fprintf('Position exceeded tolerance! Row: %d, Col: %d - %d\n',...
-                        abs_row, 3*(part-1) + 1, 3*(part-1) + 3);      
-            org_row(part, :) = nan;
         end
     end    
 end
 
 
 
-function [prev_row, org_row, speed] = organiseRow2(abs_row, prev_row, row, speed, arrange)
-    global dimens
-    global parts
-    global tolerance
-
-    % calculate the (x, y, z) distance for all parts    
-    % between prev_row and row
-    dist = zeros(parts, parts);
-    for part = 1:parts
-        for temp_part = 1:parts
-        	dist(part, temp_part) = norm(row(temp_part, :) - prev_row(part, :)) + abs(row(temp_part, 1) - prev_row(part, 1));
-        end
-    end
+function [prev_row, org_row, prev_dist] = organiseRow2(abs_row, prev_row, org_row, prev_dist, collide)
+    global filter_no
     
-    % reorganise the parts
-    org_row = nan(parts, dimens);
-    while any(~isnan(dist(:)))
-        % find the minimum (x, y, z) distance for all parts 
-        [minval, ind] = min(dist(:));
-        [ind_row, ind_col] = ind2sub(size(dist), ind);
-                
-        org_row(ind_row, :) = row(ind_col, :);
-        
-        % replace used column and row to nan
-        dist(ind_row, :) = nan;
-        dist(:, ind_col) = nan;
-    end
-    
-    if arrange(1) && org_row(2, 1) + org_row(2, 3) < org_row(3, 1) + org_row(3, 3)
+    % reorganise 2nd and 3rd part if they collided
+    if collide(1) && org_row(2, 1) + org_row(2, 3) < org_row(3, 1) + org_row(3, 3)
         [org_row(2,:), org_row(3,:)] = deal(org_row(3,:), org_row(2,:));
     end
 
-    if arrange(2) && org_row(6, 1) - org_row(6, 3) < org_row(7, 1) - org_row(7, 3)
+    % reorganise 6th and 7th part if they collided
+    if collide(2) && org_row(6, 1) - org_row(6, 3) < org_row(7, 1) - org_row(7, 3)
         [org_row(6,:), org_row(7,:)] = deal(org_row(7,:), org_row(6,:));
     end
     
-    %update previous row
-    for part = 1:parts
-        cur_dist = norm(prev_row(part, :) - org_row(part, :)) + abs(prev_row(part, 1) - org_row(part, 1));
-        if any(~isnan(org_row(part, :))) && cur_dist < mean(speed(part,:)) * 4;
-            prev_row(part, :) = org_row(part, :);
-            if cur_dist > 1
-                speed(part, :) = [speed(part, 2:end) cur_dist];
+    % update current and previous row
+    for part = [2,3,6,7]
+        % update if distance within tolerance, else set current part to nan
+        cur_dist = norm(prev_row(part, :) - org_row(part, :));
+        if any(~isnan(org_row(part, :)))
+            if cur_dist < mean(prev_dist(part,:)) * 4;
+                prev_row(part, :) = org_row(part, :);
+                
+                % dont update prev_dist if cur_dist too small
+                if cur_dist > 1
+                    prev_dist(part, :) = [prev_dist(part, 2:end) cur_dist];
+                end
+            else
+                filter_no = filter_no+1;
+                fprintf('Position exceeded tolerance! Row: %d, Col: %d - %d\n',...
+                            abs_row, 3*(part-1) + 1, 3*(part-1) + 3);      
+                org_row(part, :) = nan;
             end
-        else
-            fprintf('Position exceeded tolerance! Row: %d, Col: %d - %d\n',...
-                        abs_row, 3*(part-1) + 1, 3*(part-1) + 3);      
-            org_row(part, :) = nan;
         end
     end    
+end
+
+function collide = checkCollide(var)
+    % 2nd and 3rd part
+    x1_max = max(var(:,4:6));
+    x2_max = max(var(:,7:9));     
+    % 6th and 7th part
+    x1_min = min(var(:,16:18));
+    x2_min = min(var(:,19:21));
+    
+    % check if their extreme x position are nearby
+    collide = [abs(x1_max(1) - x2_max(1)) < 1, abs(x1_min(1) - x2_min(1)) < 1];
+end
+
+function sorted_row = sortRow(row)
+    global row_length
+    global parts
+    
+    sorted_row = nan(1, row_length);    
+    parts_x = nan(parts, 2);
+    
+    %get x value from each part
+    for part = 0:parts-1
+        x = part*3 + 1;
+        parts_x(part+1,:) = [row(x), x];
+    end
+    
+    %sort parts by x (descending order)
+    parts_x = sortrows(parts_x,-1);
+    
+    %reorganise row according to sorted parts_x
+    for part = 0:parts-1
+        x = part*3 + 1;
+        sorted_x = parts_x(part+1,2);
+        sorted_row(x:x+2) = row(sorted_x:sorted_x+2);
+    end
 end
 
 function row = reshape_2to1(row_2d)
